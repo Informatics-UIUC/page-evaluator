@@ -7,6 +7,7 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.xpath.*;
 import java.util.Iterator;
+import java.util.Properties;
 
 public class HOCRTokenIterator extends AbstractIterator<HOCRToken> implements Iterable<HOCRToken> {
     private final Element _pageXml;
@@ -44,12 +45,36 @@ public class HOCRTokenIterator extends AbstractIterator<HOCRToken> implements It
         Element wordXml = (Element) _currentLineTokens.item(_currentTokenIndex);
         boolean isLastTokenOnLine = _currentTokenIndex == _currentLineTokenCount - 1;
 
-        HOCRToken word = new HOCRToken(wordXml, isLastTokenOnLine);
+        String text = wordXml.getTextContent().trim();
+
+        Properties properties = getProperties(wordXml);
+        properties.put("isLastTokenOnLine", Boolean.toString(isLastTokenOnLine));
+
+        HOCRToken word = new HOCRToken(text, properties);
 
         // Advance to next token
         advance();
 
         return word;
+    }
+
+    private Properties getProperties(Element wordXml) {
+        Properties properties = new Properties();
+
+        String wordId = wordXml.hasAttribute("id") ? wordXml.getAttribute("id") : null;
+        if (wordId != null) properties.put("id", wordId);
+
+        String title = wordXml.getAttribute("title");
+        String[] props = title.split(";");
+        for (String prop : props) {
+            prop = prop.trim();
+            int idx = prop.indexOf(" ");
+            String propName = prop.substring(0, idx);
+            String propValue = prop.substring(idx + 1);
+            properties.put(propName, propValue);
+        }
+
+        return properties;
     }
 
     @Override
